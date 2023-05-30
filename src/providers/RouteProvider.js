@@ -8,6 +8,7 @@ import Admin from '../pages/Admin';
 import SignIn from '../pages/SignIn';
 import SignUp from '../pages/SignUp';
 import useAuth from '../hooks/useAuth';
+import PageWrapper from '../components/PageWrapper';
 
 // AuthRoute component
 const AuthRoute = ({ children }) => {
@@ -19,32 +20,36 @@ const AuthRoute = ({ children }) => {
 function RouteProvider() {
     const routes = useRoutes([
         {
+            path: '/',
+            element: <AuthRoute><PageWrapper><Rutinas /></PageWrapper></AuthRoute>,
+        },
+        {
             path: '/rutinas',
-            element: <AuthRoute><Rutinas /></AuthRoute>,
+            element: <AuthRoute><PageWrapper><Rutinas /></PageWrapper></AuthRoute>,
         },
         {
             path: '/perfil',
-            element: <AuthRoute><Perfil /></AuthRoute>,
+            element: <AuthRoute><PageWrapper><Perfil /></PageWrapper></AuthRoute>,
         },
         {
             path: '/dietas',
-            element: <AuthRoute><Dietas /></AuthRoute>,
+            element: <AuthRoute><PageWrapper><Dietas /></PageWrapper></AuthRoute>,
         },
         {
             path: '/blogs',
-            element: <AuthRoute><Blogs /></AuthRoute>,
+            element: <AuthRoute><PageWrapper><Blogs /></PageWrapper></AuthRoute>,
         },
         {
             path: '/admin',
-            element: <AuthRoute><Admin /></AuthRoute>,
+            element: <AuthRoute><PageWrapper><Admin /></PageWrapper></AuthRoute>,
         },
         {
             path: '/signin',
-            element: <SignIn />,
+            element: <PageWrapper><SignIn /></PageWrapper>,
         },
         {
             path: '/signup',
-            element: <SignUp />,
+            element: <PageWrapper><SignUp /></PageWrapper>,
         },
     ]);
 
