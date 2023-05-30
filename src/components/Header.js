@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -10,6 +10,9 @@ import Container from '@mui/material/Container';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
+import { auth } from '../firebase';
+import { signOut } from 'firebase/auth';
+import { useIdentity } from '../providers/IdentityProvider';
 
 const pages = ['Rutinas', 'Dietas', 'Blogs', 'Admin'];
 const settings = ['Perfil', 'Cerrar Sesión'];
@@ -17,6 +20,8 @@ const settings = ['Perfil', 'Cerrar Sesión'];
 function Header() {
     const [anchorElNav, setAnchorElNav] = React.useState(null);
     const [anchorElUser, setAnchorElUser] = React.useState(null);
+    const navigate = useNavigate();
+    const { updateIdentity } = useIdentity();
 
     const handleOpenNavMenu = (event) => {
         setAnchorElNav(event.currentTarget);
@@ -34,11 +39,20 @@ function Header() {
         setAnchorElUser(null);
     };
 
+    const handleSignOut = async () => {
+        try {
+            await signOut(auth);
+            updateIdentity(null);
+            navigate('/signin');
+        } catch (error) {
+            console.error('Error signing out', error);
+        }
+    };
+
     return (
-        <AppBar position="static" color='primary'>
+        <AppBar position="static" color="primary">
             <Container maxWidth="xl">
                 <Toolbar disableGutters>
-
                     <IconButton
                         size="large"
                         aria-label="open navigation"
@@ -50,6 +64,7 @@ function Header() {
                         <MenuIcon />
                     </IconButton>
 
+                    {/* Navigation Menu */}
                     <Menu
                         id="menu-appbar"
                         anchorEl={anchorElNav}
@@ -61,20 +76,32 @@ function Header() {
                         sx={{ display: { xs: 'block', md: 'none' } }}
                     >
                         {pages.map((page) => (
-                            <MenuItem key={page} onClick={handleCloseNavMenu} component={RouterLink} to={`/${page.toLowerCase()}`}>
+                            <MenuItem
+                                key={page}
+                                onClick={handleCloseNavMenu}
+                                component={RouterLink}
+                                to={`/${page.toLowerCase()}`}
+                            >
                                 {page}
                             </MenuItem>
                         ))}
                     </Menu>
 
+                    {/* Navigation Buttons */}
                     <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
                         {pages.map((page) => (
-                            <Button key={page} color="inherit" component={RouterLink} to={`/${page.toLowerCase()}`}>
+                            <Button
+                                key={page}
+                                color="inherit"
+                                component={RouterLink}
+                                to={`/${page.toLowerCase()}`}
+                            >
                                 {page}
                             </Button>
                         ))}
                     </Box>
 
+                    {/* User Avatar */}
                     <IconButton
                         size="large"
                         aria-label="account of current user"
@@ -84,6 +111,8 @@ function Header() {
                     >
                         <Avatar alt="User Avatar" />
                     </IconButton>
+
+                    {/* User Menu */}
                     <Menu
                         id="menu-appbar-user"
                         anchorEl={anchorElUser}
@@ -94,7 +123,14 @@ function Header() {
                         onClose={handleCloseUserMenu}
                     >
                         {settings.map((setting) => (
-                            <MenuItem key={setting} onClick={handleCloseUserMenu} component={RouterLink} to={`/${setting.toLowerCase().replace(' ', '')}`}>
+                            <MenuItem
+                                key={setting}
+                                onClick={
+                                    setting === 'Cerrar Sesión' ? handleSignOut : handleCloseUserMenu
+                                }
+                                component={RouterLink}
+                                to={`/${setting.toLowerCase().replace(' ', '')}`}
+                            >
                                 {setting}
                             </MenuItem>
                         ))}
