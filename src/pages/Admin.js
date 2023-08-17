@@ -11,7 +11,7 @@ import {
   TableBody,
   Button,
 } from '@mui/material';
-import { UserLevels } from '../constants/constants';
+import { UserLevels, UserRoles } from '../constants/constants';
 import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -41,17 +41,28 @@ function Admin() {
 
   const handleSaveEdit = async () => {
     try {
-      const userDoc = doc(db, 'users', editingUser.email);
-      await setDoc(userDoc, {
-        name: editingUser.name,
-        lastName: editingUser.lastName,
-        level: editingUser.level,
-        email: editingUser.email,
-      });
-      setUsers((prevUsers) =>
-        prevUsers.map((user) => (user.email === editingUser.email ? editingUser : user))
-      );
-      setEditingUser(null);
+      const userQuery = collection(db, 'users');
+      const querySnapshot = await getDocs(userQuery);
+      const userDoc = querySnapshot.docs.find((doc) => doc.data().email === editingUser.email);
+
+      if (userDoc) {
+        const userRef = doc(db, 'users', userDoc.id);
+        await setDoc(userRef, {
+          name: editingUser.name,
+          lastName: editingUser.lastName,
+          role: editingUser.role,
+          level: editingUser.level,
+          email: editingUser.email,
+        });
+
+        setUsers((prevUsers) =>
+          prevUsers.map((user) => (user.email === editingUser.email ? editingUser : user))
+        );
+
+        setEditingUser(null);
+      } else {
+        console.error('User not found.');
+      }
     } catch (error) {
       console.error('Error saving edited user:', error);
     }
@@ -83,6 +94,7 @@ function Admin() {
             <TableRow>
               <TableCell>Nombre</TableCell>
               <TableCell>Apellido</TableCell>
+              <TableCell>Rol</TableCell>
               <TableCell>Nivel</TableCell>
               <TableCell>Correo electrónico</TableCell>
               <TableCell>Acciones</TableCell>
@@ -109,6 +121,22 @@ function Admin() {
                     />
                   ) : (
                     user.lastName
+                  )}
+                </TableCell>
+                <TableCell>
+                  {editingUser && editingUser.email === user.email ? (
+                    <select
+                      value={editingUser.role}
+                      onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                    >
+                      {Object.values(UserRoles).map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    user.role
                   )}
                 </TableCell>
                 <TableCell>
