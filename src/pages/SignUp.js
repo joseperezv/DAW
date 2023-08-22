@@ -17,13 +17,30 @@ function SignUp() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordValid, setPasswordValid] = useState(true);
 
+  
   const handleChange = (event) => {
     setLevel(event.target.value);
   };
 
+  const validatePassword = (password) => {
+    const regex = /^(?=.*[A-Z]).{8,}$/;
+    return regex.test(password);
+  };
+
+  const handlePasswordChange = (event) => {
+    const newPassword = event.target.value;
+    setPassword(newPassword);
+    setPasswordValid(validatePassword(newPassword));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!passwordValid) {
+      return;
+    }
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -106,10 +123,20 @@ function SignUp() {
           fullWidth
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={handlePasswordChange}
         />
+        {!passwordValid && (
+          <Typography variant="body2" color="error">
+            La contraseña debe tener al menos 8 caracteres y al menos una letra mayúscula.
+          </Typography>
+        )}
         <Box mt={2}>
-          <Button variant="contained" color="primary" onClick={handleSubmit}>
+        <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSubmit}
+            disabled={!passwordValid}
+          >
             Registrarse
           </Button>
 

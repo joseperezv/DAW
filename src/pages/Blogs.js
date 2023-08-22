@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import { Container, Typography, Card, CardContent, Button } from '@mui/material';
 import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -64,11 +65,13 @@ function Blogs() {
       fetchBlogs();
     } catch (error) {
       console.error('Error saving edited blog:', error);
+
     }
   };
 
   const handleDelete = async (blogId) => {
     try {
+
       await deleteDoc(doc(db, 'blogs', blogId));
       fetchBlogs();
     } catch (error) {
