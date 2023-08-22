@@ -1,149 +1,164 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Typography, TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { db, auth } from '../firebase';
+import { Container, Typography, Card, CardContent, Button } from '@mui/material';
+import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useIdentity } from '../providers/IdentityProvider';
 
 function Blogs() {
+  const { user } = useIdentity();
   const [blogs, setBlogs] = useState([]);
-  const [newBlog, setNewBlog] = useState({ title: '', author: '', content: '' });
-  const [open, setOpen] = useState(false); // Estado para controlar la apertura y cierre del diálogo
+  const [newBlogTitle, setNewBlogTitle] = useState('');
+  const [newBlogText, setNewBlogText] = useState('');
+  const [editingBlogId, setEditingBlogId] = useState('');
+  const [editedBlogText, setEditedBlogText] = useState('');
+  const [editedBlogTitle, setEditedBlogTitle] = useState('');
 
-  useEffect(() => {
-    const fetchBlogs = async () => {
+  const handlePublish = async () => {
+    if (newBlogText.trim() !== '') {
       try {
-        const blogsRef = db.collection('blogs');
-        const snapshot = await blogsRef.get();
-        const blogsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setBlogs(blogsData);
+        await addDoc(collection(db, 'blogs'), {
+          title: newBlogTitle,
+          text: newBlogText,
+          createdAt: serverTimestamp(),
+          createdBy: user.email,
+        });
+        setNewBlogTitle('');
+        setNewBlogText('');
+        fetchBlogs();
       } catch (error) {
-        console.error('Error al obtener las entradas de blog:', error);
+        console.error('Error creating blog:', error);
       }
-    };
-
-    fetchBlogs();
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (newBlog.title.trim() === '' || newBlog.author.trim() === '' || newBlog.content.trim() === '') {
-      return;
     }
+  };
 
+  const fetchBlogs = async () => {
     try {
-      const publishDate = new Date();
-
-      const newBlogRef = await db.collection('blogs').add({
-        title: newBlog.title,
-        author: newBlog.author,
-        content: newBlog.content,
-        publishDate: publishDate,
-      });
-
-      setBlogs((prevBlogs) => [
-        ...prevBlogs,
-        { id: newBlogRef.id, title: newBlog.title, author: newBlog.author, content: newBlog.content, publishDate: publishDate },
-      ]);
-
-      setNewBlog({ title: '', author: '', content: '' }); // Restablecer los campos del formulario
-      setOpen(false); // Cerrar el diálogo después de publicar el blog
+      const blogsRef = collection(db, 'blogs');
+      const snapshot = await getDocs(blogsRef);
+      const blogsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setBlogs(blogsData);
     } catch (error) {
-      console.error('Error al crear la entrada de blog:', error);
+      console.error('Error fetching blogs:', error);
+    }
+  };
+
+  const handleEdit = (blogId, currentText, currentTitle) => {
+    setEditingBlogId(blogId);
+    setEditedBlogText(currentText);
+    setEditedBlogTitle(currentTitle);
+  };
+
+  const handleSaveEdit = async (blogId) => {
+    try {
+      const blogRef = doc(db, 'blogs', blogId);
+      await updateDoc(blogRef, {
+        title: editedBlogTitle,
+        text: editedBlogText,
+      });
+      setEditingBlogId('');
+      setEditedBlogText('');
+      setEditedBlogTitle('');
+      fetchBlogs();
+    } catch (error) {
+      console.error('Error saving edited blog:', error);
     }
   };
 
   const handleDelete = async (blogId) => {
     try {
-      await db.collection('blogs').doc(blogId).delete();
-
-      setBlogs((prevBlogs) => prevBlogs.filter((blog) => blog.id !== blogId));
+      await deleteDoc(doc(db, 'blogs', blogId));
+      fetchBlogs();
     } catch (error) {
-      console.error('Error al eliminar la entrada de blog:', error);
+      console.error('Error deleting blog:', error);
     }
   };
 
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
+
   return (
-    <Container maxWidth="sm">
-      <Box
-        display="flex"
-        flexDirection="column"
-        justifyContent="center"
-        alignItems="center"
-        bgcolor="background.paper"
-        p={2}
-        boxShadow={1}
-      >
-        <Typography variant="h4" component="h1" gutterBottom>
-          Blogs
-        </Typography>
-        <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
-          Publicar
-        </Button>
-        <Dialog open={open} onClose={() => setOpen(false)}>
-          <DialogTitle>Publicar blog</DialogTitle>
-          <DialogContent>
-            <form onSubmit={handleSubmit}>
-              <TextField
-                label="Título"
-                margin="normal"
-                variant="outlined"
-                fullWidth
-                value={newBlog.title}
-                onChange={(e) => setNewBlog({ ...newBlog, title: e.target.value })}
-              />
-              <TextField
-                label="Autor"
-                margin="normal"
-                variant="outlined"
-                fullWidth
-                value={newBlog.author}
-                onChange={(e) => setNewBlog({ ...newBlog, author: e.target.value })}
-              />
-              <TextField
-                label="Contenido"
-                margin="normal"
-                variant="outlined"
-                fullWidth
-                multiline
-                rows={4}
-                value={newBlog.content}
-                onChange={(e) => setNewBlog({ ...newBlog, content: e.target.value })}
-              />
-              <DialogActions>
-                <Button onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button variant="contained" color="primary" onClick={handleSubmit}>
-                  Publicar
-                </Button>
-              </DialogActions>
-            </form>
-          </DialogContent>
-        </Dialog>
+    <Container maxWidth="md">
+      <Typography variant="h4" component="h1" gutterBottom style={{ textAlign: 'center' }}>
+        Blogs
+      </Typography>
+      <div style={{ textAlign: 'center' }}>
+        <input
+          type="text"
+          placeholder="Title"
+          value={newBlogTitle}
+          onChange={(e) => setNewBlogTitle(e.target.value)}
+        />
+        <br />
+        <textarea
+          value={newBlogText}
+          onChange={(e) => setNewBlogText(e.target.value)}
+          placeholder="Write your blog..."
+          rows="4"
+          cols="50"
+        />
+        <br />
+        {editingBlogId ? (
+          <Button variant="contained" color="primary" onClick={() => handleSaveEdit(editingBlogId)}>
+            Save
+          </Button>
+        ) : (
+          <button onClick={handlePublish}>Publish</button>
+        )}
+      </div>
+      <div>
         {blogs.map((blog) => (
-          <Box
-            key={blog.id}
-            display="flex"
-            flexDirection="column"
-            justifyContent="center"
-            alignItems="center"
-            bgcolor="background.paper"
-            p={2}
-            mt={2}
-            boxShadow={1}
-          >
-            <Typography variant="body1">{blog.title}</Typography>
-            <Typography variant="body2">{blog.publishDate.toISOString()}</Typography>
-            <Typography variant="body2">{blog.author}</Typography>
-            <Typography variant="body2">{blog.content}</Typography>
-            {auth.currentUser && auth.currentUser.uid === blog.userId && (
-              <Button variant="contained" color="secondary" onClick={() => handleDelete(blog.id)}>
-                Eliminar
-              </Button>
-            )}
-          </Box>
+          <Card key={blog.id} style={{ margin: '10px 0' }}>
+            <CardContent>
+              <Typography variant="h6">{blog.title}</Typography>
+              <Typography variant="body1" gutterBottom>
+                {blog.text}
+              </Typography>
+              <Typography variant="caption">
+                Created At: {blog.createdAt ? blog.createdAt.toDate().toLocaleString() : 'N/A'}
+                {' by '}
+                {blog.createdBy}
+              </Typography>
+              {user && blog.createdBy === user.email && (
+                <div>
+                  {editingBlogId === blog.id ? (
+                    <div>
+                      <input
+                        type="text"
+                        value={editedBlogTitle}
+                        onChange={(e) => setEditedBlogTitle(e.target.value)}
+                      />
+                      <br />
+                      <textarea
+                        value={editedBlogText}
+                        onChange={(e) => setEditedBlogText(e.target.value)}
+                        rows="4"
+                        cols="50"
+                      />
+                      <br />
+                      <Button variant="contained" color="primary" onClick={() => handleSaveEdit(blog.id)}>
+                        Save
+                      </Button>
+                    </div>
+                  ) : (
+                    <div>
+                      <Button variant="contained" color="primary" onClick={() => handleEdit(blog.id, blog.text, blog.title)}>
+                        Edit
+                      </Button>
+                      <Button variant="contained" color="secondary" onClick={() => handleDelete(blog.id)}>
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         ))}
-      </Box>
+      </div>
     </Container>
   );
 }
