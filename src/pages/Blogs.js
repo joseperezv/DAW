@@ -56,7 +56,6 @@ function Blogs() {
     try {
       const blogRef = doc(db, 'blogs', blogId);
       await updateDoc(blogRef, {
-        title: editedBlogTitle,
         text: editedBlogText,
       });
       setEditingBlogId('');
